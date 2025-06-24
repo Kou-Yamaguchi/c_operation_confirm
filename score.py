@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import subprocess, argparse
+import shutil
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -23,11 +24,14 @@ def compile_c(src: Path, exe: Path):
         return False, e.stderr
 
 
-def run_tests(exe: Path, tests_dir: Path):
+def run_tests(exe: Path, tests_dir: Path, work_dir: Path ,read_file: Path = None) -> tuple[bool, str]:
     """準備済みテスト全てを回し、1つでも失敗すれば False"""
 
     all_ok = True
     review_msgs = []
+
+    if read_file and read_file.exists():
+        shutil.copy2(read_file, work_dir)  # 課題実行時に読み込むファイルをコピー
 
     for infile in sorted(tests_dir.glob("*.in")):
         tname = infile.stem  # test1, test2, ...
@@ -45,6 +49,7 @@ def run_tests(exe: Path, tests_dir: Path):
                 input=in_data,  # バイナリ入力が必要な場合はこれを使う
                 # capture_output=True,
                 # text=True,
+                cwd=work_dir,  # 作業ディレクトリを指定
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=TIMEOUT_SEC,
@@ -67,6 +72,12 @@ def run_tests(exe: Path, tests_dir: Path):
             review_msgs.append(f"{tname}: 出力不一致\n  期待: {exp_norm}\n  実際: {out_norm}")
             all_ok = False
 
+    if read_file and read_file.exists():
+        try:
+            read_file.unlink()  # 課題実行時に読み込むファイルを削除
+        except FileNotFoundError:
+            pass
+
     return all_ok, "\n".join(review_msgs) if review_msgs else "全てのテストに合格しました"
 
 
@@ -77,6 +88,12 @@ def main():
     )
     ap.add_argument(
         "--tests", required=True, type=Path, help="テストケースを置いたディレクトリ"
+    )
+    ap.add_argument(
+        "--readfile", type=Path, default=None, help="課題実行時に読み込むファイル (オプション, 課題による)"
+    )
+    ap.add_argument(
+        "--writefile", type=str, default=None, help="課題実行時に書き込むファイル (オプション, 課題による)"
     )
     ap.add_argument(
         "--roster", required=True, type=Path, help="学生名簿ファイル xlsx (1行目ヘッダ: 学籍番号, 名前, ...)"
@@ -120,7 +137,7 @@ def main():
             }
             continue
 
-        ok_test, msg_test = run_tests(exe, args.tests)
+        ok_test, msg_test = run_tests(exe, args.tests, student_dir, args.readfile)
         records[student_id] = {
             "student_id": student_id,
             "compile": "OK",
