@@ -121,9 +121,9 @@ project/
 
 ### 📁 tests フォルダの形式（例）
 
-- sample1.in（入力ファイル）
-- sample1.out（期待される出力ファイル）
-- sample2.in、sample2.out も同様に
+- case1.in（入力ファイル）
+- case1.out（期待される出力ファイル）
+- case2.in、case2.out も同様に
 
 ---
 
