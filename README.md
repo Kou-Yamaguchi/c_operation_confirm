@@ -105,6 +105,7 @@ project/
 │       ├── 0000001/last.c
 │       ├── 0000002/main.c
 │       └── ...
+├── input.dat              # (任意)ファイル入力がある場合
 └── roster.xlsx           # 名簿（学籍番号と氏名のExcel）
 ```
 
@@ -132,8 +133,11 @@ project/
 以下のコマンドで採点を実行できます：
 
 ```sh
-python score.py --submits submits/{submits} --tests tests/{tests} --roster {roster}.xlsx --outfile result.xlsx
+python score.py --submits submits/{submits} --tests tests/{tests} --roster {roster}.xlsx --outfile result.xlsx --readfile {input.dat}
 ```
+
+--readfile は、ファイル入力をする課題のときのみ使用します。
+ファイル入力をしない場合は省略できます。
 
 成功すると、採点結果が result.xlsx に保存されます。
 
