@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import subprocess, argparse
 import shutil
 from pathlib import Path
@@ -30,8 +31,11 @@ def run_tests(exe: Path, tests_dir: Path, work_dir: Path ,read_file: Path = None
     all_ok = True
     review_msgs = []
 
+    if read_file and not read_file.exists():
+        raise FileNotFoundError(f"課題実行時に読み込むファイルが見つかりません: {read_file}")
+    
     if read_file and read_file.exists():
-        shutil.copy2(read_file, work_dir)  # 課題実行時に読み込むファイルをコピー
+        cp_path = Path(shutil.copy2(read_file, work_dir))  # 課題実行時に読み込むファイルをコピー
 
     for infile in sorted(tests_dir.glob("*.in")):
         tname = infile.stem  # test1, test2, ...
@@ -39,12 +43,11 @@ def run_tests(exe: Path, tests_dir: Path, work_dir: Path ,read_file: Path = None
 
         if not exp.exists():
             raise FileNotFoundError(f"期待出力ファイルが見つかりません: {exp}")
-        
+
         in_data = infile.read_bytes()
-        
         try:
             result = subprocess.run(
-                [str(exe)],
+                ["./" + os.path.basename(exe)],
                 # input=infile.read_text(), string 入力が必要な場合はこれを使う
                 input=in_data,  # バイナリ入力が必要な場合はこれを使う
                 # capture_output=True,
@@ -57,7 +60,7 @@ def run_tests(exe: Path, tests_dir: Path, work_dir: Path ,read_file: Path = None
         except subprocess.TimeoutExpired:
             review_msgs.append(f"{tname}: タイムアウト({TIMEOUT_SEC}s 超過)")
             all_ok = False
-            continue
+            break
 
         out_text = result.stdout.decode("utf-8", errors="replace")
 
@@ -72,9 +75,9 @@ def run_tests(exe: Path, tests_dir: Path, work_dir: Path ,read_file: Path = None
             review_msgs.append(f"{tname}: 出力不一致\n  期待: {exp_norm}\n  実際: {out_norm}")
             all_ok = False
 
-    if read_file and read_file.exists():
+    if cp_path and cp_path.exists():
         try:
-            read_file.unlink()  # 課題実行時に読み込むファイルを削除
+            cp_path.unlink()  # 課題実行時に読み込むファイルを削除
         except FileNotFoundError:
             pass
 
@@ -117,6 +120,7 @@ def main():
             continue  # Cファイルがない場合はスキップ
 
         src = c_files[-1]
+        # print(f"採点対象: {src}")
         exe = src.with_suffix("")  # ./student_name/0000001-0
 
         ok_compile, msg_compile = compile_c(src, exe)
